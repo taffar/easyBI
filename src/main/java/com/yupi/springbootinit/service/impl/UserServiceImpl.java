@@ -128,7 +128,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 user = new User();
                 user.setUnionId(unionId);
                 user.setMpOpenId(mpOpenId);
-                user.setUserAvatar(wxOAuth2UserInfo.getHeadImgUrl());
+                user.setUserAvatar(wxOAuth2UserInfo.getHeadImgUrl().getBytes());
                 user.setUserName(wxOAuth2UserInfo.getNickname());
                 boolean result = this.save(user);
                 if (!result) {

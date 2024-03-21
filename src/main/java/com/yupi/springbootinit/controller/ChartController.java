@@ -1,6 +1,8 @@
 package com.yupi.springbootinit.controller;
+
 import java.util.Date;
 
+import com.alibaba.excel.write.metadata.RowData;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.springbootinit.annotation.AuthCheck;
 import com.yupi.springbootinit.common.BaseResponse;
@@ -10,6 +12,7 @@ import com.yupi.springbootinit.common.ResultUtils;
 import com.yupi.springbootinit.constant.UserConstant;
 import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.exception.ThrowUtils;
+import com.yupi.springbootinit.manager.AIManager;
 import com.yupi.springbootinit.model.dto.chart.ChartAddRequest;
 import com.yupi.springbootinit.model.dto.chart.ChartQueryRequest;
 import com.yupi.springbootinit.model.dto.file.UploadFileRequest;
@@ -46,6 +49,8 @@ public class ChartController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private AIManager aiManager;
     // region 增删改查
 
     /**
@@ -63,13 +68,12 @@ public class ChartController {
         // 校验参数
         String name = chartAddRequest.getName();
         ThrowUtils.throwIf(StringUtils.isEmpty(chartAddRequest.getGoal()), ErrorCode.PARAMS_ERROR, "目标不能为空");
-        ThrowUtils.throwIf(StringUtils.isEmpty(chartAddRequest.getChartData()), ErrorCode.PARAMS_ERROR, "分析数据不能为空");
         ThrowUtils.throwIf(StringUtils.isEmpty(chartAddRequest.getChartType()), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
-        ThrowUtils.throwIf(StringUtils.isEmpty(name)||name.length()>100, ErrorCode.PARAMS_ERROR, "图表名称错误");
+        ThrowUtils.throwIf(StringUtils.isEmpty(name) || name.length() > 100, ErrorCode.PARAMS_ERROR, "图表名称错误");
 
         Chart Chart = new Chart();
         BeanUtils.copyProperties(chartAddRequest, Chart);
-        
+
         User loginUser = userService.getLoginUser(request);
         Chart.setUserId(loginUser.getId());
         //
@@ -81,7 +85,7 @@ public class ChartController {
 
 
     @PostMapping("/gen")
-    public BaseResponse<String> genChartByAI( @RequestPart("file") MultipartFile multipartFile,@ModelAttribute ChartAddRequest chartAddRequest,HttpServletRequest request) {
+    public BaseResponse<Long> genChartByAI(@RequestPart("file") MultipartFile multipartFile, @ModelAttribute ChartAddRequest chartAddRequest, HttpServletRequest request) {
 
         /**
          * http请求不为空
@@ -93,41 +97,46 @@ public class ChartController {
         }
         String goal = chartAddRequest.getGoal();
         String name = chartAddRequest.getName();
-        String chartData = chartAddRequest.getChartData();
         String chartType = chartAddRequest.getChartType();
         // 校验参数
         ThrowUtils.throwIf(StringUtils.isEmpty(goal), ErrorCode.PARAMS_ERROR, "目标不能为空");
-        ThrowUtils.throwIf(StringUtils.isEmpty(chartData), ErrorCode.PARAMS_ERROR, "分析数据不能为空");
-        ThrowUtils.throwIf(StringUtils.isEmpty(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
+//        ThrowUtils.throwIf(StringUtils.isEmpty(chartType), ErrorCode.PARAMS_ERROR, "图表类型不能为空");
         ThrowUtils.throwIf(StringUtils.isEmpty(name) || name.length() > 100, ErrorCode.PARAMS_ERROR, "图表名称错误");
 
         StringBuilder builder = new StringBuilder();
-        builder.append("你是一名优秀的数据分析师，根据分析目标:" + goal + ",以及以下数据帮我生成一个" + chartType + "类型的图表。");
+        builder.append("你是一名优秀的数据分析师，根据分析目标:" + goal + ",以及以下数据帮我生成一个" + chartType + "图表。");
         String csv = FileUtils.getFileString(multipartFile);
         builder.append(csv);
 
         // 调用ai接口
+        String rawData = aiManager.sendMesToAIUseXingHuo(builder.toString());
+        // 处理数据
+        String[] splits = StringUtils.split(rawData, "【【【【【");
+        ThrowUtils.throwIf(splits.length<2, ErrorCode.AI_GEN_ERROR);
+        String code = splits[0].trim();
+        String analyse = splits[1].trim();
+        // 保存至数据库
+        ThrowUtils.throwIf(StringUtils.isBlank(code), ErrorCode.AI_GEN_ERROR, "ai生成代码异常");
+        ThrowUtils.throwIf(StringUtils.isBlank(analyse), ErrorCode.AI_GEN_ERROR, "ai生成结论异常");
 
-        return ResultUtils.success(csv.toString());
-            /**
-             * 暂时不存入数据库
-             */
-//        Chart Chart = new Chart();
-//        Chart.setGoal(goal);
-//        Chart.setName(name);
-//        Chart.setChartData(builder.toString());
-//        Chart.setChartType(chartType);
-//        //
-//        Chart.setGenChart("");
-//        Chart.setCreateTime(new Date());
-//        Chart.setUpdateTime(new Date());
-//        User loginUser = userService.getLoginUser(request);
-//        Chart.setUserId(loginUser.getId());
-//        boolean result = ChartService.save(Chart);
-//        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-//        long newChartId = Chart.getId();
-//       return ResultUtils.success(newChartId);
-        }
+        /**
+         * 存入数据库
+         */
+        Chart Chart = new Chart();
+        Chart.setGoal(goal);
+        Chart.setName(name);
+        Chart.setChartData(csv);
+        Chart.setChartType(chartType);
+        // 生成图表代码存储至
+        Chart.setGenChart(code);
+        Chart.setGenResult(analyse);
+        User loginUser = userService.getLoginUser(request);
+        Chart.setUserId(loginUser.getId());
+        boolean result = ChartService.save(Chart);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        long newChartId = Chart.getId();
+        return ResultUtils.success(newChartId);
+    }
 
     /**
      * 删除
@@ -136,7 +145,7 @@ public class ChartController {
      * @param request
      * @return
      */
-    @PostMapping ("/delete")
+    @PostMapping("/delete")
     public BaseResponse<Boolean> deleteChart(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -204,7 +213,7 @@ public class ChartController {
      */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<ChartVO>> listChartVOByPage(@RequestBody ChartQueryRequest ChartQueryRequest,
-            HttpServletRequest request) {
+                                                         HttpServletRequest request) {
         long current = ChartQueryRequest.getCurrent();
         long size = ChartQueryRequest.getPageSize();
         // 限制爬虫
@@ -223,7 +232,7 @@ public class ChartController {
      */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<ChartVO>> listMyChartVOByPage(@RequestBody ChartQueryRequest ChartQueryRequest,
-            HttpServletRequest request) {
+                                                           HttpServletRequest request) {
         if (ChartQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -246,12 +255,7 @@ public class ChartController {
      * @param ChartQueryRequest
      * @param request
      * @return
-//     */
-
-
-
-
-
+    //     */
 
 
 }

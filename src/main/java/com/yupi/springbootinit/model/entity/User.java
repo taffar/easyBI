@@ -50,7 +50,7 @@ public class User implements Serializable {
     /**
      * 用户头像
      */
-    private String userAvatar;
+    private byte[] userAvatar;
 
 
     /**

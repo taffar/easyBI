@@ -24,11 +24,6 @@ public class ChartAddRequest implements Serializable {
     private String name;
 
     /**
-     * 目标图表数据
-     */
-    private String chartData;
-
-    /**
      * 生成图表的类型
      */
     private String chartType;

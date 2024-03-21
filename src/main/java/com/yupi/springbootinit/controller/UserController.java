@@ -1,5 +1,6 @@
 package com.yupi.springbootinit.controller;
 
+import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.springbootinit.annotation.AuthCheck;
 import com.yupi.springbootinit.common.BaseResponse;
@@ -21,7 +22,10 @@ import com.yupi.springbootinit.model.vo.LoginUserVO;
 import com.yupi.springbootinit.model.vo.UserVO;
 import com.yupi.springbootinit.service.UserService;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,20 +37,15 @@ import me.chanjar.weixin.mp.api.WxMpService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import static com.yupi.springbootinit.service.impl.UserServiceImpl.SALT;
 
-/**
- * 用户接口
- *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
+/***
+ * @author: lily
+ * @description: 用户管理相关
  */
 @RestController
 @RequestMapping("/user")
@@ -172,6 +171,7 @@ public class UserController {
         }
         User user = new User();
         BeanUtils.copyProperties(userAddRequest, user);
+        updateAvatar(userAddRequest.getAvatar(), user);
         // 默认密码 12345678
         String defaultPassword = "12345678";
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + defaultPassword).getBytes());
@@ -200,7 +200,7 @@ public class UserController {
 
     /**
      * 更新用户
-     *
+     * 仅管理员-更改用户角色/权限
      * @param userUpdateRequest
      * @param request
      * @return
@@ -212,12 +212,18 @@ public class UserController {
         if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
+        MultipartFile userAvatar = userUpdateRequest.getAvatar();
         User user = new User();
         BeanUtils.copyProperties(userUpdateRequest, user);
+        // 单独更新头像
+        updateAvatar(userAvatar, user);
+        User loginUser = userService.getLoginUser(request);
+        user.setId(loginUser.getId());
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
+
 
     /**
      * 根据 id 获取用户（仅管理员）
@@ -304,17 +310,53 @@ public class UserController {
      * @return
      */
     @PostMapping("/update/my")
-    public BaseResponse<Boolean> updateMyUser(@RequestBody UserUpdateMyRequest userUpdateMyRequest,
-            HttpServletRequest request) {
+    public BaseResponse<Boolean> updateMyUser(@ModelAttribute UserUpdateMyRequest userUpdateMyRequest,
+                                              HttpServletRequest request) {
         if (userUpdateMyRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
+        MultipartFile userAvatar = userUpdateMyRequest.getAvatar();
         User user = new User();
         BeanUtils.copyProperties(userUpdateMyRequest, user);
+        updateAvatar(userAvatar, user);
         user.setId(loginUser.getId());
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
+    }
+
+    private void updateAvatar(MultipartFile userAvatar, User user) {
+        // 非空才校验
+        if (!Objects.isNull(userAvatar)){
+            Boolean isPri = validateImg(userAvatar);
+            ThrowUtils.throwIf(!isPri, ErrorCode.OPERATION_ERROR, "头像更新失败");
+        }
+        byte[] avatarBytes;
+        try {
+            avatarBytes = FileCopyUtils.copyToByteArray(userAvatar.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        user.setUserAvatar(avatarBytes);
+    }
+
+
+    /**
+     * 上传头像校验头像是否合法
+     */
+    private Boolean validateImg(MultipartFile file) {
+        if (file == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片不能为空");
+        }
+        if (file.getSize() >= 20 * 1024 * 1024) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片大小超出最大限制");
+        }
+        String suffix = FileUtil.getSuffix(file.getOriginalFilename());
+        final String[] ALLOW_PIC_SUFFIX = {"png", "jpg","jpeg"};
+        if (!Arrays.asList(ALLOW_PIC_SUFFIX).contains(suffix)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片格式错误");
+        }
+        return true;
     }
 }

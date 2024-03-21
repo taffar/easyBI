@@ -11,7 +11,7 @@
             <result property="unionId" column="unionId" jdbcType="VARCHAR"/>
             <result property="mpOpenId" column="mpOpenId" jdbcType="VARCHAR"/>
             <result property="userName" column="userName" jdbcType="VARCHAR"/>
-            <result property="userAvatar" column="userAvatar" jdbcType="VARCHAR"/>
+            <result property="userAvatar" column="userAvatar" jdbcType="BLOB"/>
             <result property="userRole" column="userRole" jdbcType="VARCHAR"/>
             <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
             <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
