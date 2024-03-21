@@ -165,13 +165,13 @@ public class UserController {
      */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest, HttpServletRequest request) {
+    public BaseResponse<Long> addUser(@ModelAttribute UserAddRequest userAddRequest,@RequestParam("avatar") MultipartFile avatar, HttpServletRequest request) {
         if (userAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User user = new User();
         BeanUtils.copyProperties(userAddRequest, user);
-        updateAvatar(userAddRequest.getAvatar(), user);
+        updateAvatar(avatar, user);
         // 默认密码 12345678
         String defaultPassword = "12345678";
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + defaultPassword).getBytes());
@@ -207,16 +207,15 @@ public class UserController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest,
+    public BaseResponse<Boolean> updateUser(@ModelAttribute UserUpdateRequest userUpdateRequest,@RequestParam("avatar") MultipartFile avatar,
             HttpServletRequest request) {
         if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        MultipartFile userAvatar = userUpdateRequest.getAvatar();
         User user = new User();
         BeanUtils.copyProperties(userUpdateRequest, user);
         // 单独更新头像
-        updateAvatar(userAvatar, user);
+        updateAvatar(avatar, user);
         User loginUser = userService.getLoginUser(request);
         user.setId(loginUser.getId());
         boolean result = userService.updateById(user);
@@ -310,16 +309,15 @@ public class UserController {
      * @return
      */
     @PostMapping("/update/my")
-    public BaseResponse<Boolean> updateMyUser(@ModelAttribute UserUpdateMyRequest userUpdateMyRequest,
+    public BaseResponse<Boolean> updateMyUser(@ModelAttribute UserUpdateMyRequest userUpdateMyRequest, @RequestParam("avatar") MultipartFile avatar,
                                               HttpServletRequest request) {
         if (userUpdateMyRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
-        MultipartFile userAvatar = userUpdateMyRequest.getAvatar();
         User user = new User();
         BeanUtils.copyProperties(userUpdateMyRequest, user);
-        updateAvatar(userAvatar, user);
+        updateAvatar(avatar, user);
         user.setId(loginUser.getId());
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);

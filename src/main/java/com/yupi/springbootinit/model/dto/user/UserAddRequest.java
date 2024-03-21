@@ -7,8 +7,6 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * 用户创建请求
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
  */
 @Data
 public class UserAddRequest implements Serializable {
@@ -22,11 +20,11 @@ public class UserAddRequest implements Serializable {
      * 账号
      */
     private String userAccount;
-
-    /**
-     * 用户头像
-     */
-    private MultipartFile avatar;
+//
+//    /**
+//     * 用户头像
+//     */
+//    private MultipartFile avatar;
 
     /**
      * 用户角色: user, admin

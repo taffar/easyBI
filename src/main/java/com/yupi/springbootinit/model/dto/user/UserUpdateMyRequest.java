@@ -17,11 +17,11 @@ public class UserUpdateMyRequest implements Serializable {
      * 用户昵称
      */
     private String userName;
-
-    /**
-     * 用户头像
-     */
-    private MultipartFile avatar;
+//
+//    /**
+//     * 用户头像
+//     */
+//    private MultipartFile avatar;
 
     /**
      * 简介

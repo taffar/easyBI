@@ -22,10 +22,10 @@ public class UserUpdateRequest implements Serializable {
      */
     private String userName;
 
-    /**
-     * 用户头像，上传图片文件
-     */
-    private MultipartFile avatar;
+//    /**
+//     * 用户头像，上传图片文件
+//     */
+//    private MultipartFile avatar;
 
     /**
      * 简介
