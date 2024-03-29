@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.yupi.springbootinit.model.dto.chart.ChartQueryRequest;
 import com.yupi.springbootinit.model.entity.Chart;
 import com.yupi.springbootinit.model.vo.ChartVO;
-import com.yupi.springbootinit.model.vo.PostVO;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -23,5 +23,9 @@ public interface ChartService extends IService<Chart> {
 
     Page<ChartVO> getChartVOPage(Page<Chart> chartPage, HttpServletRequest request);
 
-//    Page<Chart> searchFromEs(ChartQueryRequest chartQueryRequest);
+    void handleGenChartError(long chartId, String message);
+
+    String getAiQuestion(String csv, String goal, String chartType);
+
+
 }

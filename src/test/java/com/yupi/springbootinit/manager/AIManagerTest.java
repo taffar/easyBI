@@ -2,11 +2,9 @@ package com.yupi.springbootinit.manager;
 
 import cn.hutool.json.JSON;
 import cn.hutool.json.JSONUtil;
-import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
-import java.util.Map;
 
 /**
  * Created by lily via on 2024/3/21 0:18

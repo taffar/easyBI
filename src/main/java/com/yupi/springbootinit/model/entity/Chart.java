@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.yupi.springbootinit.constant.ChartConstant;
 import lombok.Data;
 
 /**
@@ -21,6 +22,16 @@ public class Chart implements Serializable {
      */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
+
+    /**
+     * 任务执行情况
+     */
+    private Integer chartStatus= ChartConstant.WAITING;
+
+    /**
+     * 任务执行信息
+     */
+    private String executorMessage;
 
     /**
      * 分析目标

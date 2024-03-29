@@ -1,13 +1,13 @@
 package com.yupi.springbootinit.exception;
 
 import com.yupi.springbootinit.common.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 抛异常工具类
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
  */
+@Slf4j
 public class ThrowUtils {
 
     /**
@@ -29,6 +29,7 @@ public class ThrowUtils {
      * @param errorCode
      */
     public static void throwIf(boolean condition, ErrorCode errorCode) {
+        log.error(errorCode.getMessage());
         throwIf(condition, new BusinessException(errorCode));
     }
 
@@ -40,6 +41,7 @@ public class ThrowUtils {
      * @param message
      */
     public static void throwIf(boolean condition, ErrorCode errorCode, String message) {
+        log.error(errorCode.getMessage()+","+message);
         throwIf(condition, new BusinessException(errorCode, message));
     }
 }

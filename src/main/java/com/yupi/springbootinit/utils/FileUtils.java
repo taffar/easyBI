@@ -23,6 +23,7 @@ import java.util.Map;
  */
 public class FileUtils {
 
+    // todo 数据正则获取
     public static String getFileString(MultipartFile multipartFile){
 //        File file = null;
 //        try {
