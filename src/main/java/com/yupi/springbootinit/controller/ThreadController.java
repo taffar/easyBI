@@ -19,10 +19,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 /**
  * Created by lily via on 2024/3/24 16:46
  */
-@RestController
-@RequestMapping("/thread")
+//@RestController
+//@RequestMapping("/thread")
 @Slf4j
-@Profile({"dev", "local"})
+//@Profile({"dev", "local"})
 public class ThreadController {
 
     @Resource

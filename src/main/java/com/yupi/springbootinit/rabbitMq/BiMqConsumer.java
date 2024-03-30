@@ -37,7 +37,7 @@ public class BiMqConsumer {
      * 监听器指定了要监听的队列，ack模式为手动确认
      *
      * @param channel     用于处理返回消息接收状态
-     * @param message     消息
+     * @param message     图表存入数据库后主键id
      * @param deliveryTag 消息体唯一标签
      */
     @RabbitListener(queues = {MqConstant.BI_WORK_QUEUE}, ackMode = "MANUAL")
@@ -67,7 +67,13 @@ public class BiMqConsumer {
         String[] splits = StringUtils.split(rawData, "【【【【【");
         // 生成数据校验
         if (splits.length < 2 || StringUtils.isBlank(splits[0]) || StringUtils.isBlank(splits[1])) {
-            ChartService.handleGenChartError(chartId, "ai生成数据有误");
+            try {
+                channel.basicNack(deliveryTag, false, false);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }finally {
+                ChartService.handleGenChartError(chartId, "ai生成数据有误");
+            }
         }
         String code = splits[0].trim();
         String analyse = splits[1].trim();
@@ -81,7 +87,13 @@ public class BiMqConsumer {
         boolean succeed = ChartService.save(Chart);
         // todo 保存失败,消息放入死信队列
         if (!succeed) {
-            ChartService.handleGenChartError(chartId, "更新图表succeed状态失败");
+            try {
+                channel.basicNack(deliveryTag, false, false);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }finally {
+                ChartService.handleGenChartError(chartId, "更新图表succeed状态失败");
+            }
         }
         try {
             channel.basicAck(deliveryTag, false);
