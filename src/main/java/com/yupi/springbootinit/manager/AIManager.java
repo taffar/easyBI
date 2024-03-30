@@ -61,7 +61,7 @@ public class AIManager {
         // 同步调用
         SparkSyncChatResponse chatResponse = sparkClient.chatSync(sparkRequest);
         String responseContent = chatResponse.getContent();
-        log.info("星火AI返回的结果\n{}", responseContent);
+        log.info("AI返回的结果成功");
         return responseContent;
     }
 }

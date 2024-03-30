@@ -78,6 +78,14 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart> implements
         return null;
     }
 
+    /**
+     * @description: 更新数据库状态异常
+            * @param: chartId
+                        message
+            * @return:
+            * @author lily via
+            * @date: 2024/3/31 3:18
+     */
     @Override
     public void handleGenChartError(long chartId, String message) {
         log.error("图表更新状态失败");
@@ -88,7 +96,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart> implements
         boolean b = updateById(updateChart);
         if (!b) {
             log.error("更新图表失败状态失败");
-            throw new BusinessException(ErrorCode.AI_GEN_ERROR, message);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, message);
         }
     }
 

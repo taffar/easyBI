@@ -1,8 +1,10 @@
 package com.yupi.springbootinit.rabbitMq;
 
 import com.rabbitmq.client.Channel;
+import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.constant.ChartConstant;
 import com.yupi.springbootinit.constant.MqConstant;
+import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.manager.AIManager;
 import com.yupi.springbootinit.model.entity.Chart;
 import com.yupi.springbootinit.service.ChartService;
@@ -24,6 +26,7 @@ import java.io.IOException;
 @Slf4j
 // TODO 实现死信消息进入死信队列再处理
 public class BiMqConsumer {
+    private int cnt = 1;
 
     @Resource
     private ChartService ChartService;
@@ -40,8 +43,9 @@ public class BiMqConsumer {
      * @param message     图表存入数据库后主键id
      * @param deliveryTag 消息体唯一标签
      */
-    @RabbitListener(queues = {MqConstant.BI_WORK_QUEUE}, ackMode = "MANUAL")
+    @RabbitListener(queues = {MqConstant.BI_WORK_QUEUE}, concurrency = "4")
     public void receiveMessage(Channel channel, String message, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
+
         // todo 校验message
         long chartId = Long.parseLong(message);
         log.info("receive a message {}", chartId);
@@ -62,18 +66,13 @@ public class BiMqConsumer {
         String aiQuestion = ChartService.getAiQuestion(csv, goal, chartType);
         // 调用ai接口
         String rawData = aiManager.sendMesToAIUseXingHuo(aiQuestion);
-        // todo 抽出来放入service方法中
         // 处理数据 TODO 正则清洗数据
         String[] splits = StringUtils.split(rawData, "【【【【【");
         // 生成数据校验
         if (splits.length < 2 || StringUtils.isBlank(splits[0]) || StringUtils.isBlank(splits[1])) {
-            try {
-                channel.basicNack(deliveryTag, false, false);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }finally {
-                ChartService.handleGenChartError(chartId, "ai生成数据有误");
-            }
+            // todo
+            log.error("图表: {},ai生成消息失败,第x次尝试重试生成", message);
+            throw new BusinessException(ErrorCode.AI_GEN_ERROR, "ai生成消息错误");
         }
         String code = splits[0].trim();
         String analyse = splits[1].trim();
@@ -85,15 +84,8 @@ public class BiMqConsumer {
         // 生成成功更改状态
         Chart.setChartStatus(ChartConstant.SUCCEED);
         boolean succeed = ChartService.save(Chart);
-        // todo 保存失败,消息放入死信队列
         if (!succeed) {
-            try {
-                channel.basicNack(deliveryTag, false, false);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }finally {
-                ChartService.handleGenChartError(chartId, "更新图表succeed状态失败");
-            }
+           ChartService.handleGenChartError(chartId, "更新图表succeed状态失败");
         }
         try {
             channel.basicAck(deliveryTag, false);

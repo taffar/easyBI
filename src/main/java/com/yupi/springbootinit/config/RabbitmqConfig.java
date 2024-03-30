@@ -20,17 +20,20 @@ import java.util.Map;
 @Configuration
 public class RabbitmqConfig {
 
-
     /**
      * 正常工作交换机，开启持久化
      */
     @Bean
-    DirectExchange normalExchange() {
+    DirectExchange BiWorkExchange() {
         return new DirectExchange(MqConstant.BI_WORK_EXCHANGE, true, false);
     }
 
+    /**
+     * 工作队列与死信交换机绑定
+     * @return
+     */
     @Bean
-    public Queue normalQueue() {
+    public Queue BiWorkQueue() {
         // durable: 是否持久化,默认是false,持久化队列：会被存储在磁盘上，当消息代理重启时仍然存在，暂存队列：当前连接有效
         // exclusive: 默认也是false，只能被当前创建的连接使用，而且当连接关闭后队列即被删除。此参考优先级高于durable
         // autoDelete: 是否自动删除，当没有生产者或者消费者使用此队列，该队列会自动删除。
@@ -40,34 +43,19 @@ public class RabbitmqConfig {
         return new Queue(MqConstant.BI_WORK_QUEUE, true, false, false, args);
     }
 
-    @Bean
-    public Queue ttlQueue() {
-        Map<String, Object> args = deadQueueArgs();
-        // 队列设置消息过期时间 60 秒
-        args.put("x-message-ttl", 60 * 1000);
-        return new Queue("ttlQueue", true, false, false, args);
-    }
 
     @Bean
-    Binding normalRouteBinding() {
-        return BindingBuilder.bind(normalQueue()).to(normalExchange()).with("normalRouting");
+    Binding BiWorkRouteBinding() {
+        return BindingBuilder.bind(BiWorkQueue()).to(BiWorkExchange()).with(MqConstant.BI_WORK_ROUTING_KEY);
     }
 
-    @Bean
-    Binding ttlRouteBinding() {
-        return BindingBuilder.bind(ttlQueue()).to(normalExchange()).with("ttlRouting");
-    }
 
     /**
      * 死信配置
      */
 
     /**
-     * @description: 声明死信交换机
-            * @param: 持久的不会自动删除的交换机
-            * @return:
-            * @author lily via
-            * @date: 2024/3/31 1:32
+     * 声明死信交换机
      */
     @Bean
     DirectExchange deadExchange() {
@@ -75,17 +63,17 @@ public class RabbitmqConfig {
     }
 
     /**
-     * @description: 死信队列
-            * @param:
-            * @return:
-            * @author lily via
-            * @date: 2024/3/31 1:34
+     * 死信队列
      */
     @Bean
     public Queue deadQueue() {
         return new Queue(MqConstant.DEAD_LETTER_QUEUE, true, false, false);
     }
 
+    /**
+     * 死信队列与交换机绑定
+     * @return
+     */
     @Bean
     Binding deadRouteBinding() {
         return BindingBuilder.bind(deadQueue()).to(deadExchange()).with(MqConstant.DEAD_LETTER_ROUTING_KEY);

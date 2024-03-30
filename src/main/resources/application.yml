@@ -42,10 +42,15 @@ spring:
     host: localhost
     username: guest
     password: guest
-    # 设置消息确认机制为手动
     listener:
       simple:
-        acknowledge-mode: manual
+        # ACK模式(默认为auto)
+        acknowledge-mode: auto
+        # 开启重试
+        retry:
+          enabled: true
+          max-attempts: 5
+          initial-interval: 5000
   # Elasticsearch 配置
   # todo 需替换配置，然后取消注释
 #  elasticsearch:
